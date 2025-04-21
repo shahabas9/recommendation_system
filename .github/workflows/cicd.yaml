@@ -1,0 +1,89 @@
+name: workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  integration:
+    name: Continuous Integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Lint Code
+        run: echo "Linting Repository"
+
+      - name: Run Unit Test
+        run: echo "Running unit tests"
+
+  build-and-push-dockerhub-image:
+    name: Continuous Delivery
+    needs: integration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Installing Utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq unzip
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push Docker image
+        env:
+          IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $IMAGE_NAME:$IMAGE_TAG .
+          docker push $IMAGE_NAME:$IMAGE_TAG
+
+  continuous-deployment:
+    name: Continuous Deployment
+    needs: build-and-push-dockerhub-image
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Pull latest image from Docker Hub
+        env:
+          IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}
+        run: |
+          docker pull $IMAGE_NAME:latest
+
+      - name: Stop and remove existing container if running
+        run: |
+          docker stop cnncls 2>/dev/null || true
+          docker rm -fv cnncls 2>/dev/null || true
+
+      - name: Run Docker container
+        env:
+          IMAGE_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ secrets.DOCKER_HUB_REPOSITORY }}
+        run: |
+          docker run -d -p 8501:8501 --name=cnncls $IMAGE_NAME:latest
+
+      - name: Clean up unused Docker resources
+        run: |
+          docker system prune -f

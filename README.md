@@ -70,7 +70,7 @@ git clone "your-project"
 ```
 
 ```bash
-docker build -t shahabas9/bookapp:latest . 
+docker build -t shahabas9/book_recommendation:latest . 
 ```
 
 ```bash
@@ -78,7 +78,7 @@ docker images -a
 ```
 
 ```bash
-docker run -d -p 8501:8501 shahabas9/bookapp 
+docker run -d -p 8501:8501 shahabas9/book_recommendation 
 ```
 
 ```bash
@@ -98,15 +98,15 @@ docker login
 ```
 
 ```bash
-docker push shahabas9/bookapp:latest 
+docker push shahabas9/book_recommendation:latest 
 ```
 
 ```bash
-docker rmi shahabas9/bookapp:latest
+docker rmi shahabas9/book_recommendation:latest
 ```
 
 ```bash
-docker pull shahabas9/bookapp
+docker pull shahabas9/book_recommendation
 ```
 
 
